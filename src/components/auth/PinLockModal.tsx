@@ -33,6 +33,8 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
   const [isAuthenticatingBio, setIsAuthenticatingBio] = useState<boolean>(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const hasAutoPromptedRef = useRef<boolean>(false);
+  const isAuthenticatingBioRef = useRef<boolean>(false);
 
   // Play subtle sci-fi tech synthesizer chirps
   const playTechSound = useCallback((type: 'beep' | 'error' | 'success') => {
@@ -96,9 +98,10 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
     setTimeout(() => setShake(false), 500);
   }, [playTechSound]);
 
-  // Biometric trigger function
+  // Biometric trigger function with debounced concurrency lock
   const triggerBiometricAuth = useCallback(async () => {
-    if (isAuthenticatingBio) return;
+    if (isAuthenticatingBioRef.current) return;
+    isAuthenticatingBioRef.current = true;
     setIsAuthenticatingBio(true);
     setErrorMessage('');
     
@@ -110,18 +113,21 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
         setTimeout(() => {
           onUnlock('', true);
         }, 350);
-      } else {
-        // User cancelled or finger not recognized
-        setIsAuthenticatingBio(false);
       }
     } catch {
-      setIsAuthenticatingBio(false);
+      // User cancelled or finger not recognized
     } finally {
       setIsAuthenticatingBio(false);
+      setTimeout(() => {
+        isAuthenticatingBioRef.current = false;
+      }, 500);
     }
-  }, [isAuthenticatingBio, onUnlock, playTechSound]);
+  }, [onUnlock, playTechSound]);
 
-  // Check biometric support & auto prompt if enabled
+  const triggerBiometricAuthRef = useRef(triggerBiometricAuth);
+  triggerBiometricAuthRef.current = triggerBiometricAuth;
+
+  // Check biometric support & auto prompt if enabled (strictly once per modal opening)
   useEffect(() => {
     if (isOpen) {
       setPinInput('');
@@ -132,19 +138,23 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
       setIsSettingMode(settingMode);
       setStep('enter');
 
-      // Check biometric hardware
+      // Check biometric hardware once
       biometricService.checkBiometrics().then((status) => {
         setBiometricStatus(status);
-        // If unlocking and biometrics enabled, trigger automatically
-        if (!settingMode && isPinConfigured && isBiometricEnabled && status.isAvailable) {
+        // Only trigger ONCE per lock appearance
+        if (!settingMode && isPinConfigured && isBiometricEnabled && status.isAvailable && !hasAutoPromptedRef.current) {
+          hasAutoPromptedRef.current = true;
           const timer = setTimeout(() => {
-            triggerBiometricAuth();
-          }, 300);
+            triggerBiometricAuthRef.current();
+          }, 350);
           return () => clearTimeout(timer);
         }
       });
+    } else {
+      hasAutoPromptedRef.current = false;
+      isAuthenticatingBioRef.current = false;
     }
-  }, [isOpen, isPinConfigured, isBiometricEnabled, triggerBiometricAuth]);
+  }, [isOpen, isPinConfigured, isBiometricEnabled]);
 
   const handleKeyPress = useCallback((num: string) => {
     if (pinInput.length < 4) {

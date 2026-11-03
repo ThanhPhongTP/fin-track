@@ -17,8 +17,8 @@ import type {
   Category,
   InvestmentAsset,
 } from '../types/finance.ts';
-import { formatVND, formatDisplayDate, calculateAssetProfitLoss } from '../services/financeEngine.ts';
-import { CategoryIcon } from '../components/common/CategoryIcon.tsx';
+import { formatVND, calculateAssetProfitLoss } from '../services/financeEngine.ts';
+import { TransactionItem } from '../components/common/TransactionItem.tsx';
 
 interface DashboardViewProps {
   bankStats: {
@@ -49,6 +49,8 @@ interface DashboardViewProps {
   onOpenAddAsset: () => void;
   onEditAsset: (asset: InvestmentAsset) => void;
   onNavigateToTransactions: () => void;
+  onEditTransaction?: (tx: Transaction) => void;
+  onDeleteTransaction?: (id: string) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -65,6 +67,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenAddAsset,
   onEditAsset,
   onNavigateToTransactions,
+  onEditTransaction,
+  onDeleteTransaction,
 }) => {
   const { balances, totalNetWorth, cashBankTotal } = bankStats;
 
@@ -535,117 +539,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {recentTransactions.slice(0, 5).map((t) => {
-              const cat = categories.find((c) => c.id === t.categoryId) || {
-                name: 'Chung',
-                icon: 'CircleEllipsis',
-                color: '#94a3b8',
-              };
+          <div
+            className="glass-card"
+            style={{
+              padding: '2px 12px',
+              borderRadius: '12px',
+              border: '1px solid var(--border-subtle)',
+            }}
+          >
+            {recentTransactions.slice(0, 5).map((t, idx) => {
+              const cat = categories.find((c) => c.id === t.categoryId);
               const bank = bankStats.balances.find((b) => b.bank.id === t.bankId)?.bank;
-              const isIncome = t.type === 'income';
+              const isLast = idx === Math.min(recentTransactions.length, 5) - 1;
 
               return (
-                <div
+                <TransactionItem
                   key={t.id}
-                  className="glass-card"
-                  style={{
-                    padding: '11px 13px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
-                    borderRadius: 'var(--radius-md)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0, flex: 1 }}>
-                      <div
-                        style={{
-                          width: '34px',
-                          height: '34px',
-                          borderRadius: '9px',
-                          background: `${cat.color}20`,
-                          color: cat.color,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <CategoryIcon name={cat.icon} size={17} color={cat.color} />
-                      </div>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {cat.name}
-                          </span>
-                          {bank && (
-                            <span
-                              style={{
-                                fontSize: '0.65rem',
-                                fontWeight: 600,
-                                padding: '1px 6px',
-                                borderRadius: 'var(--radius-full)',
-                                background: bank.color ? `${bank.color}1a` : 'rgba(56, 189, 248, 0.12)',
-                                color: bank.color || '#38bdf8',
-                                border: `1px solid ${bank.color ? `${bank.color}33` : 'rgba(56, 189, 248, 0.2)'}`,
-                                flexShrink: 0,
-                              }}
-                            >
-                              {bank.name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: '0.975rem',
-                        fontWeight: 800,
-                        fontFamily: 'var(--font-mono)',
-                        color: isIncome ? 'var(--accent-income)' : 'var(--accent-expense)',
-                        textAlign: 'right',
-                        flexShrink: 0,
-                        letterSpacing: '-0.02em',
-                      }}
-                    >
-                      {isIncome ? '+' : '-'}{formatVND(t.amount, isBalanceHidden)}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '0.725rem',
-                      color: 'var(--text-muted)',
-                      paddingTop: '4px',
-                      borderTop: '1px solid rgba(255, 255, 255, 0.04)',
-                      minWidth: 0,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <span style={{ flexShrink: 0 }}>{formatDisplayDate(t.date)}</span>
-                    {t.note && (
-                      <>
-                        <span style={{ opacity: 0.4, flexShrink: 0 }}>•</span>
-                        <span
-                          style={{
-                            color: 'var(--text-secondary)',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                          title={t.note}
-                        >
-                          {t.note}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
+                  transaction={t}
+                  category={cat}
+                  bank={bank}
+                  isBalanceHidden={isBalanceHidden}
+                  showDate={true}
+                  showTime={true}
+                  showActions={Boolean(onEditTransaction || onDeleteTransaction)}
+                  isLast={isLast}
+                  onEdit={onEditTransaction}
+                  onDelete={onDeleteTransaction}
+                />
               );
             })}
           </div>

@@ -262,6 +262,8 @@ export const App: React.FC = () => {
             onOpenAddAsset={() => handleOpenAddAsset('gold')}
             onEditAsset={handleEditAsset}
             onNavigateToTransactions={() => setActiveTab('transactions')}
+            onEditTransaction={handleEditTransaction}
+            onDeleteTransaction={deleteTransaction}
           />
         )}
 
@@ -288,6 +290,8 @@ export const App: React.FC = () => {
             categories={categories}
             banks={banks}
             isBalanceHidden={settings.isBalanceHidden}
+            onEditTransaction={handleEditTransaction}
+            onDeleteTransaction={deleteTransaction}
           />
         )}
       </main>
@@ -307,6 +311,11 @@ export const App: React.FC = () => {
           setEditingTransaction(null);
         }}
         onSave={handleSaveTransaction}
+        onDelete={(id) => {
+          deleteTransaction(id);
+          setIsTransactionModalOpen(false);
+          setEditingTransaction(null);
+        }}
         banks={banks}
         categories={categories}
         initialData={editingTransaction}

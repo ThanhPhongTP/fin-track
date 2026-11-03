@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Banknote, Calendar, Tag, FileText } from 'lucide-react';
+import { X, Check, Banknote, Calendar, Tag, FileText, Trash2 } from 'lucide-react';
 import type { BankAccount, Category, Transaction, TransactionType } from '../../types/finance.ts';
 import { CategoryIcon } from '../common/CategoryIcon.tsx';
 import { getTodayDateString } from '../../services/financeEngine.ts';
@@ -15,6 +15,7 @@ interface TransactionModalProps {
     date: string;
     note?: string;
   }) => void;
+  onDelete?: (id: string) => void;
   banks: BankAccount[];
   categories: Category[];
   initialData?: Transaction | null;
@@ -24,6 +25,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  onDelete,
   banks,
   categories,
   initialData,
@@ -362,12 +364,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <FileText size={14} style={{ display: 'inline', marginRight: '6px' }} />
               Ghi chú (Tuỳ chọn)
             </label>
-            <input
-              type="text"
+            <textarea
+              rows={2}
               placeholder={categoryId === 'exp_cash' ? 'Ví dụ: Rút ATM cây VCB phố Huế tiêu vặt' : 'Ghi chú chi tiết...'}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className="form-input"
+              style={{
+                resize: 'none',
+                lineHeight: 1.4,
+                padding: '8px 12px',
+                height: 'auto',
+                minHeight: '56px',
+              }}
             />
           </div>
 
@@ -378,7 +387,34 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           )}
 
           {/* Action buttons */}
-          <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '24px', alignItems: 'center' }}>
+            {initialData && onDelete && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  if (confirm(`Bạn có chắc chắn muốn xoá giao dịch này không?`)) {
+                    onDelete(initialData.id);
+                  }
+                }}
+                style={{
+                  background: 'rgba(244, 63, 94, 0.12)',
+                  color: '#f43f5e',
+                  border: '1px solid rgba(244, 63, 94, 0.3)',
+                  padding: '10px 14px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  borderRadius: 'var(--radius-sm)',
+                }}
+                title="Xoá giao dịch này"
+              >
+                <Trash2 size={16} />
+                Xoá
+              </button>
+            )}
             <button
               type="button"
               className="btn btn-secondary"
